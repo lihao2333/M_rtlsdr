@@ -1,0 +1,333 @@
+C51 COMPILER V9.00   MAIN                                                                  04/08/2016 18:28:25 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: E:\2.DevelopSoft\Keil\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "main.h"
+   2          #include "LCD12864.h"
+   3          #include "GPS.h"
+   4          
+   5          //¶¨Òå±äÁ¿
+   6          unsigned char KEY_NUM = 0;
+   7          bit Page = 0;
+   8          unsigned char xdata Display_GPGGA_Buffer[68];
+   9          unsigned char xdata Display_GPRMC_Buffer[68];
+  10          bit Flag_OV = 0;
+  11          bit Flag_Calc_GPGGA_OK = 0;
+  12          bit Flag_Calc_GPRMC_OK = 0;
+  13          
+  14          //****************************************************
+  15          //Ö÷º¯Êý
+  16          //****************************************************
+  17          void main()
+  18          {
+  19   1              unsigned char i = 0;
+  20   1              LCD12864_Reset();                                                               //³õÊ¼»¯Òº¾§
+  21   1              LCD12864_HAIZI_SET();                                                   //ÉèÖÃÎªÆÕÍ¨Ä£Ê½
+  22   1              
+  23   1              Delay_ms(100);
+  24   1              
+  25   1      
+  26   1              LCD12864_COM_Write(0x80);                                               //Ö¸ÕëÉèÖÃ
+  27   1              LCD12864_write_word("¡ù¡ù¡ù¡ù¡ù¡ù¡ù¡ù");
+  28   1              LCD12864_COM_Write(0x90);                                               //Ö¸ÕëÉèÖÃ
+  29   1              LCD12864_write_word("    »¶Ó­Ê¹ÓÃ    ");                        
+  30   1              LCD12864_COM_Write(0x88);                                               //Ö¸ÕëÉèÖÃ
+  31   1              LCD12864_write_word("ÕýÔÚ³õÊ¼»¯GPS...");
+  32   1              LCD12864_COM_Write(0x98);                                               //Ö¸ÕëÉèÖÃ
+  33   1              LCD12864_write_word("¡ù¡ù¡ù¡ù¡ù¡ù¡ù¡ù");
+  34   1      
+  35   1              Uart_Init();
+  36   1      
+  37   1              while(1)
+  38   1              {
+  39   2                      Scan_Key();
+  40   2                      if(Flag_GPS_OK == 1 && RX_Buffer[4] == 'G' && RX_Buffer[6] == ',' && RX_Buffer[13] == '.')                      //È·¶¨ÊÇ·ñÊ
+             -Õµ½"GPGGA"ÕâÒ»Ö¡Êý¾Ý
+  41   2                      {
+  42   3                              for( i = 0; i < 68 ; i++)
+  43   3                              {
+  44   4                                      Display_GPGGA_Buffer[i] = RX_Buffer[i]; 
+  45   4                              }
+  46   3                              Hour = (Display_GPGGA_Buffer[7]-0x30)*10+(Display_GPGGA_Buffer[8]-0x30)+8;                      //UTCÊ±¼ä×ª»»µ½±±¾©Ê±¼äUTC
+             -+8    
+  47   3                                                                                                                                                                                                      //0X30ÎªASCIIÂë×ª»»ÎªÊý×Ö
+  48   3                                      if( Hour >= 24)                         //Òç³ö
+  49   3                              {
+  50   4                                      Hour %= 24;                             //»ñÈ¡µ±Ç°Hour
+  51   4                                      Flag_OV = 1;                    //ÈÕÆÚ½øÎ»
+  52   4                              }
+  53   3                              else
+C51 COMPILER V9.00   MAIN                                                                  04/08/2016 18:28:25 PAGE 2   
+
+  54   3                              {
+  55   4                                      Flag_OV = 0;
+  56   4                              }
+  57   3      
+  58   3                              Min_High = Display_GPGGA_Buffer[9];
+  59   3                              Min_Low = Display_GPGGA_Buffer[10];
+  60   3              
+  61   3                              Sec_High = Display_GPGGA_Buffer[11];
+  62   3                              Sec_Low = Display_GPGGA_Buffer[12];
+  63   3      
+  64   3                              Flag_Calc_GPGGA_OK = 1;
+  65   3                      }
+  66   2      
+  67   2                      if(Page == 0 && Flag_Calc_GPGGA_OK == 1)
+  68   2                      {
+  69   3      //                      LED1 = ~LED1;
+  70   3                              Flag_Calc_GPGGA_OK = 0;
+  71   3                      
+  72   3                              LCD12864_COM_Write(0x80);                       //ÉèÖÃÖ¸Õë
+  73   3                              LCD12864_write_word("¡ï");                              //ÏÔÊ¾ÄÚÈÝ
+  74   3                              LCD12864_Data_Write(Hour/10+0x30);
+  75   3                              LCD12864_Data_Write(Hour%10+0x30);
+  76   3                              LCD12864_write_word("Ê±");
+  77   3              
+  78   3                              LCD12864_Data_Write(Min_High);
+  79   3                              LCD12864_Data_Write(Min_Low);
+  80   3                              LCD12864_write_word("·Ö");
+  81   3              
+  82   3                              LCD12864_Data_Write(Sec_High);
+  83   3                              LCD12864_Data_Write(Sec_Low);
+  84   3                              LCD12864_write_word("Ãë");
+  85   3                              LCD12864_write_word("¡ï");
+  86   3              
+  87   3              
+  88   3                              LCD12864_COM_Write(0x90);                       //ÉèÖÃÖ¸Õë
+  89   3                              
+  90   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[28]);                  //N »òÕß S
+  91   3                              LCD12864_Data_Write(' ');
+  92   3      
+  93   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[17]);                  //Î³¶È
+  94   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[18]);                  //Î³¶È
+  95   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[19]);                  //Î³¶È
+  96   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[20]);                  //Î³¶È
+  97   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[21]);                  //Î³¶È
+  98   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[22]);                  //Î³¶È
+  99   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[23]);                  //Î³¶È
+ 100   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[24]);                  //Î³¶È
+ 101   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[25]);                  //Î³¶È
+ 102   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[26]);                  //Î³¶È
+ 103   3                              LCD12864_write_word("    ");
+ 104   3      
+ 105   3      
+ 106   3                              LCD12864_COM_Write(0x88);                       //ÉèÖÃÖ¸Õë
+ 107   3                              
+ 108   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[42]);                  //E »òÕß W
+ 109   3                              LCD12864_Data_Write(' ');
+ 110   3      
+ 111   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[30]);                  //¾­¶È
+ 112   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[31]);  
+ 113   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[32]);  
+ 114   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[33]);                  //¾­¶È
+ 115   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[34]);  
+C51 COMPILER V9.00   MAIN                                                                  04/08/2016 18:28:25 PAGE 3   
+
+ 116   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[35]);
+ 117   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[36]);  
+ 118   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[37]);
+ 119   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[38]);  
+ 120   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[39]);
+ 121   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[40]);
+ 122   3                              LCD12864_write_word("   ");     
+ 123   3      
+ 124   3                              LCD12864_COM_Write(0x98);                       //ÉèÖÃÖ¸Õë
+ 125   3                              LCD12864_write_word("º£°Î£º    ");                              //ÏÔÊ¾ÄÚÈÝ
+ 126   3                              
+ 127   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[54]);  
+ 128   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[55]);  
+ 129   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[56]);  
+ 130   3                              LCD12864_Data_Write(Display_GPGGA_Buffer[57]);
+ 131   3                              LCD12864_write_word("Ã×");                      
+ 132   3                      }
+ 133   2                      
+ 134   2                      if(Flag_GPS_OK == 1 && RX_Buffer[4] == 'M' && RX_Buffer[52] == ',' && RX_Buffer[59] == ',')                     //È·¶¨ÊÇ·ñ
+             -ÊÕµ½"GPRMC"ÕâÒ»Ö¡Êý¾Ý
+ 135   2                      {
+ 136   3                              for( i = 0; i < 68 ; i++)
+ 137   3                              {
+ 138   4                                      Display_GPRMC_Buffer[i] = RX_Buffer[i]; 
+ 139   4                              }
+ 140   3      
+ 141   3                              Year_High = Display_GPRMC_Buffer[57];
+ 142   3                              Year_Low = Display_GPRMC_Buffer[58];
+ 143   3      
+ 144   3                              Month_High = Display_GPRMC_Buffer[55];
+ 145   3                              Month_Low = Display_GPRMC_Buffer[56];
+ 146   3      
+ 147   3                              Day_High = Display_GPRMC_Buffer[53];
+ 148   3                              Day_Low = Display_GPRMC_Buffer[54];
+ 149   3      
+ 150   3      
+ 151   3                              if(Flag_OV == 1)                        //ÓÐ½øÎ»
+ 152   3                              {
+ 153   4                                      UTCDate2LocalDate();                    //UTCÈÕÆÚ×ª»»Îª±±¾©Ê±¼ä         
+ 154   4                              }
+ 155   3      
+ 156   3                              Flag_Calc_GPRMC_OK = 1;
+ 157   3                      }
+ 158   2      
+ 159   2                      if(Page == 1 && Flag_Calc_GPRMC_OK == 1)
+ 160   2                      {
+ 161   3      //                      LED1 = ~LED1;
+ 162   3                              Flag_Calc_GPRMC_OK = 0;
+ 163   3                              
+ 164   3                              LCD12864_COM_Write(0x80);                       //ÉèÖÃÖ¸Õë
+ 165   3                              LCD12864_write_word("20");
+ 166   3                              LCD12864_Data_Write(Year_High);
+ 167   3                              LCD12864_Data_Write(Year_Low);
+ 168   3                              LCD12864_write_word("Äê");
+ 169   3              
+ 170   3                              LCD12864_Data_Write(Month_High);
+ 171   3                              LCD12864_Data_Write(Month_Low);
+ 172   3                              LCD12864_write_word("ÔÂ");
+ 173   3              
+ 174   3                              LCD12864_Data_Write(Day_High);
+ 175   3                              LCD12864_Data_Write(Day_Low);
+ 176   3                              LCD12864_write_word("ÈÕ");
+C51 COMPILER V9.00   MAIN                                                                  04/08/2016 18:28:25 PAGE 4   
+
+ 177   3                              
+ 178   3                              
+ 179   3                              LCD12864_COM_Write(0x90);                       //ÉèÖÃÖ¸Õë
+ 180   3                              LCD12864_write_word("ËÙ¶È£º  ");                                //ÏÔÊ¾ÄÚÈÝ
+ 181   3      
+ 182   3                              LCD12864_Data_Write(' ');
+ 183   3                              LCD12864_Data_Write(Display_GPRMC_Buffer[46]);          
+ 184   3                              LCD12864_Data_Write(Display_GPRMC_Buffer[47]);          
+ 185   3                              LCD12864_Data_Write(Display_GPRMC_Buffer[48]);                  
+ 186   3                              LCD12864_Data_Write(Display_GPRMC_Buffer[49]);  
+ 187   3                              LCD12864_Data_Write(Display_GPRMC_Buffer[50]);
+ 188   3                              
+ 189   3                              LCD12864_write_word("Ã×");
+ 190   3                                                      
+ 191   3                      }               
+ 192   2              }
+ 193   1      }
+ 194          
+ 195          //****************************************************
+ 196          //UTCÈÕÆÚÓëµ±µØÈÕÆÚ×ª»»
+ 197          //****************************************************
+ 198          void UTCDate2LocalDate(void)
+ 199          {
+ 200   1              Day = (Day_High - 0x30) * 10 + (Day_Low-0x30) + 1;              //ÈÕ  ¼ÓÒ»
+ 201   1              Month = (Month_High - 0x30) * 10 + (Month_Low - 0x30);
+ 202   1              Year = 2000 + (Year_High - 0x30) * 10 + (Year_Low - 0x30);
+ 203   1              
+ 204   1              MaxDay = GetMaxDay(Month,Year);                         //»ñÈ¡µ±ÔÂ ÌìÊý ×î´óÖµ
+ 205   1              if(Day > MaxDay)                //Òç³ö
+ 206   1              {
+ 207   2                      Day = 1;
+ 208   2                      Month += 1;
+ 209   2                      if(Month > 12)
+ 210   2                      {
+ 211   3                              Year+=1;
+ 212   3                      }
+ 213   2              }
+ 214   1      
+ 215   1              Day_High = Day/10 + 0x30;                               //×ª»»ÈÕÆÚÖµÎªASCII
+ 216   1              Day_Low = Day%10 + 0x30;
+ 217   1      
+ 218   1              Month_High = Month/10 + 0x30;                   //×ª»»ÔÂ·ÝÖµÎªASCII
+ 219   1              Month_Low = Month%10 + 0x30;
+ 220   1      
+ 221   1              Year_High = Year%100/10 + 0x30;                 //×ª»»Äê·ÝÖµÎªASCII
+ 222   1              Year_Low = Year%10 + 0x30;                      
+ 223   1      }
+ 224          
+ 225          //****************************************************
+ 226          //»ñÈ¡µ±ÔÂÈÕÆÚ×î´óÖµ
+ 227          //****************************************************
+ 228          unsigned char GetMaxDay(unsigned char Month_Value,unsigned int Year_Value)
+ 229          {
+ 230   1              unsigned char iDays;
+ 231   1              switch(Month_Value)
+ 232   1              {
+ 233   2                      case 1:
+ 234   2                      case 3:
+ 235   2                      case 5:
+ 236   2                      case 7:
+ 237   2                      case 8:
+ 238   2                      case 10:
+C51 COMPILER V9.00   MAIN                                                                  04/08/2016 18:28:25 PAGE 5   
+
+ 239   2                      case 12:
+ 240   2                              {
+ 241   3                                      iDays = 31;
+ 242   3                              }
+ 243   2                              break;
+ 244   2                      case 2:
+ 245   2                              {
+ 246   3                                      //2ÔÂ·Ý±È½ÏÌØÊâ£¬ÐèÒª¸ù¾ÝÊÇ²»ÊÇÈòÄêÀ´ÅÐ¶Ïµ±ÔÂÊÇ28Ìì»¹29Ìì
+ 247   3                                      iDays = IsLeapYear(Year_Value)?29:28;
+ 248   3                              }
+ 249   2                              break;
+ 250   2                      case 4:
+ 251   2                      case 6:
+ 252   2                      case 9:
+ 253   2                      case 11:
+ 254   2                              {
+ 255   3                                      iDays = 30;
+ 256   3                              }
+ 257   2                              break;
+ 258   2                      default : break;
+ 259   2              }
+ 260   1              return(iDays);                                          
+ 261   1      }
+ 262          
+ 263          //****************************************************
+ 264          //ÈòÄê¼ì²â
+ 265          //****************************************************
+ 266          bit IsLeapYear(unsigned int uiYear)
+ 267          {
+ 268   1              return (((uiYear%4)==0)&&((uiYear%100)!=0))||((uiYear%400)==0);
+ 269   1      }
+ 270          
+ 271          
+ 272          //****************************************************
+ 273          //°´¼üÉ¨Ãè³ÌÐò
+ 274          //****************************************************
+ 275          void Scan_Key()
+ 276          {
+ 277   1              if( KEY4 == 0 )                                         //°´¼ü1É¨Ãè
+ 278   1              {
+ 279   2                      Delay_ms(10);                                   //ÑÓÊ±È¥¶¶
+ 280   2                      if( KEY4 == 0 )
+ 281   2                      {
+ 282   3                              while(KEY4 == 0);                       //µÈ´ýËÉÊÖ
+ 283   3                              KEY_NUM = 4;
+ 284   3                              Page = ~Page;
+ 285   3                              LCD12864_COM_Write(0X01);       //ÇåÆÁ
+ 286   3                      }
+ 287   2              }
+ 288   1      }
+ 289          //****************************************************
+ 290          //MSÑÓÊ±º¯Êý(12M¾§ÕñÏÂ²âÊÔ)
+ 291          //****************************************************
+ 292          void Delay_ms(unsigned int n)
+ 293          {
+ 294   1              unsigned int  i,j;
+ 295   1              for(i=0;i<n;i++)
+ 296   1                      for(j=0;j<123;j++);
+ 297   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+C51 COMPILER V9.00   MAIN                                                                  04/08/2016 18:28:25 PAGE 6   
+
+   CODE SIZE        =   1190    ----
+   CONSTANT SIZE    =    107    ----
+   XDATA SIZE       =    136    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      1       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      4    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,149 @@
+C51 COMPILER V9.00   UART                                                                  08/27/2016 20:01:36 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE UART
+OBJECT MODULE PLACED IN uart.OBJ
+COMPILER INVOKED BY: E:\2.DevelopSoft\Keil\C51\BIN\C51.EXE uart.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          /******************************************************************
+   2                  作者：神秘藏宝室
+   3                  店铺：ILoveMCU.taobao.com
+   4                  最终解释权归原作者所有，鄙视其他店铺不劳而获的抄袭行为！
+   5          ******************************************************************/
+   6          #include "uart.h"
+   7          
+   8          char idata gpsRxBuffer[gpsRxBufferLength];
+   9          unsigned char RX_Count = 0;
+  10          _SaveData Save_Data;
+  11          
+  12          void Uart_Init()                                                                   
+  13          {
+  14   1              SCON = 0X50;  //UART方式1；8位UART
+  15   1              REN  = 1;     //允许串行口接收数据
+  16   1              PCON = 0x00;  //SMOD=0;波特率不加倍
+  17   1              TMOD = 0x20;  //T1方式2，用于产生波特率
+  18   1              TH1  = 0xFD;  //装初值
+  19   1              TL1  = 0xFD;
+  20   1              TR1  = 1;     //启动定时器1
+  21   1              EA   = 1;     //打开全局中断控制
+  22   1              ES   = 1;     //打开串行口中断  
+  23   1      }
+  24          
+  25          void UartPrintf(unsigned char *p)                               //发送字符串
+  26          {       
+  27   1              while(*p)
+  28   1              {
+  29   2                      SBUF=*(p++);
+  30   2                      while(TI==0)
+  31   2                      {
+  32   3      
+  33   3                      };
+  34   2                      TI=0;
+  35   2              }   
+  36   1      }
+  37          
+  38          void UartPrintASCII(unsigned char c)                            //发送一个字符
+  39          { 
+  40   1          TI=0;   
+  41   1          SBUF=c;   
+  42   1          while(TI==0);   
+  43   1          TI=0;   
+  44   1      }
+  45          
+  46          
+  47          void RECEIVE_DATA(void) interrupt 4 using 3                     
+  48          { 
+  49   1              unsigned char temp = 0;
+  50   1              char i = 0;
+  51   1              ES=0;
+  52   1              temp = SBUF;
+  53   1              RI = 0;
+  54   1              
+  55   1              if(temp == '$')
+C51 COMPILER V9.00   UART                                                                  08/27/2016 20:01:36 PAGE 2   
+
+  56   1              {
+  57   2                      RX_Count = 0;   
+  58   2              }
+  59   1                      
+  60   1              if(RX_Count <= 5)
+  61   1              {
+  62   2                 gpsRxBuffer[RX_Count++] = temp;
+  63   2              }
+  64   1              else if(gpsRxBuffer[0] == '$' &gpsRxBuffer[4] == 'M' && gpsRxBuffer[5] == 'C')                  //确定是否收到"GPRMC/GNR
+             -MC"这一帧数据
+  65   1              {
+  66   2                      gpsRxBuffer[RX_Count++] = temp;
+  67   2                      if(temp == '\n')                                                                           
+  68   2                      {
+  69   3                              memset(Save_Data.GPS_Buffer, 0, GPS_Buffer_Length);      //清空
+  70   3                              memcpy(Save_Data.GPS_Buffer, gpsRxBuffer, RX_Count);    //保存数据
+  71   3                              Save_Data.isGetData = true;
+  72   3                              RX_Count = 0;
+  73   3                              memset(gpsRxBuffer, 0, gpsRxBufferLength);      //清空                          
+  74   3                      }
+  75   2                      
+  76   2                      if(RX_Count >= 75)
+  77   2                      {
+  78   3                              RX_Count = 75;
+  79   3                              gpsRxBuffer[RX_Count] = '\0';//添加结束符
+  80   3                      }                       
+  81   2              }
+  82   1              ES=1; 
+  83   1      }
+  84          
+  85          void clrStruct()
+  86          {
+  87   1              Save_Data.isGetData = false;
+  88   1              Save_Data.isParseData = false;
+  89   1              Save_Data.isUsefull = false;
+  90   1              memset(Save_Data.GPS_Buffer, 0, GPS_Buffer_Length);      //清空
+  91   1              memset(Save_Data.UTCTime, 0, UTCTime_Length);
+  92   1              memset(Save_Data.latitude, 0, latitude_Length);
+  93   1              memset(Save_Data.N_S, 0, N_S_Length);
+  94   1              memset(Save_Data.longitude, 0, longitude_Length);
+  95   1              memset(Save_Data.E_W, 0, E_W_Length);
+  96   1              
+  97   1      }
+  98          
+  99          
+ 100          
+ 101          
+ 102          
+ 103          
+ 104          
+ 105          
+ 106          
+ 107          
+ 108          
+ 109          
+ 110          
+ 111          
+ 112          
+ 113          
+ 114          
+ 115          
+ 116          
+C51 COMPILER V9.00   UART                                                                  08/27/2016 20:01:36 PAGE 3   
+
+ 117          
+ 118          
+ 119          
+ 120          
+ 121          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    355    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =    121    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      1       4
+   IDATA SIZE       =     76    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
